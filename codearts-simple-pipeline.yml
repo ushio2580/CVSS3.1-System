@@ -1,0 +1,359 @@
+# CodeArts Simple Pipeline Configuration for CVSS System
+# This pipeline is designed to work directly in CodeArts without complex dependencies
+
+version: '3.8'
+
+stages:
+  - name: "Environment Setup"
+    steps:
+      - name: "Update System"
+        action: "shell"
+        inputs:
+          script: |
+            #!/bin/bash
+            echo "🚀 Starting CVSS System deployment in CodeArts"
+            echo "=============================================="
+            
+            # Update system packages
+            yum update -y
+            
+            # Install essential tools
+            yum install -y git curl wget unzip
+
+      - name: "Install Python 3.12"
+        action: "shell"
+        inputs:
+          script: |
+            #!/bin/bash
+            echo "🐍 Installing Python 3.12..."
+            
+            # Install EPEL repository
+            yum install -y epel-release
+            
+            # Install Python 3.12
+            yum install -y python3.12 python3.12-pip python3.12-devel
+            
+            # Create symlink
+            ln -sf /usr/bin/python3.12 /usr/bin/python3
+            
+            # Verify installation
+            python3 --version
+            echo "✅ Python 3.12 installed successfully"
+
+      - name: "Install Node.js 18"
+        action: "shell"
+        inputs:
+          script: |
+            #!/bin/bash
+            echo "📦 Installing Node.js 18..."
+            
+            # Install NodeSource repository
+            curl -fsSL https://rpm.nodesource.com/setup_18.x | bash -
+            
+            # Install Node.js
+            yum install -y nodejs
+            
+            # Verify installation
+            node --version
+            npm --version
+            echo "✅ Node.js 18 installed successfully"
+
+      - name: "Install PostgreSQL"
+        action: "shell"
+        inputs:
+          script: |
+            #!/bin/bash
+            echo "🗄️ Installing PostgreSQL..."
+            
+            # Install PostgreSQL
+            yum install -y postgresql postgresql-server postgresql-devel
+            
+            # Initialize database
+            postgresql-setup initdb
+            
+            # Start and enable PostgreSQL
+            systemctl start postgresql
+            systemctl enable postgresql
+            
+            # Create database and user
+            sudo -u postgres psql << EOF
+CREATE DATABASE cvss_db;
+CREATE USER cvss_user WITH PASSWORD 'cvss_password';
+GRANT ALL PRIVILEGES ON DATABASE cvss_db TO cvss_user;
+\q
+EOF
+            
+            echo "✅ PostgreSQL installed and configured"
+
+      - name: "Install Build Tools"
+        action: "shell"
+        inputs:
+          script: |
+            #!/bin/bash
+            echo "🔧 Installing build tools..."
+            
+            # Install development tools
+            yum groupinstall -y "Development Tools"
+            
+            # Install additional packages
+            yum install -y gcc gcc-c++ make
+            
+            echo "✅ Build tools installed"
+
+  - name: "Application Deployment"
+    steps:
+      - name: "Clone Repository"
+        action: "shell"
+        inputs:
+          script: |
+            #!/bin/bash
+            echo "📥 Cloning CVSS System repository..."
+            
+            # Clone repository
+            git clone https://github.com/ushio2580/CVSS3.1-System.git /tmp/cvss-system
+            cd /tmp/cvss-system
+            
+            echo "✅ Repository cloned successfully"
+
+      - name: "Setup Application Directory"
+        action: "shell"
+        inputs:
+          script: |
+            #!/bin/bash
+            echo "📁 Setting up application directory..."
+            
+            # Create application directories
+            mkdir -p /opt/cvss-system
+            mkdir -p /var/log/cvss-system
+            
+            # Copy application files
+            cp -r /tmp/cvss-system/backend /opt/cvss-system/
+            cp -r /tmp/cvss-system/frontend /opt/cvss-system/
+            cp /tmp/cvss-system/docker-compose.yml /opt/cvss-system/
+            cp /tmp/cvss-system/install.sh /opt/cvss-system/
+            
+            # Create application user
+            useradd -r -s /bin/bash -d /opt/cvss-system cvss
+            
+            # Set ownership
+            chown -R cvss:cvss /opt/cvss-system
+            chown -R cvss:cvss /var/log/cvss-system
+            
+            echo "✅ Application directory setup completed"
+
+      - name: "Setup Backend"
+        action: "shell"
+        inputs:
+          script: |
+            #!/bin/bash
+            echo "🔧 Setting up backend..."
+            
+            cd /opt/cvss-system/backend
+            
+            # Create virtual environment
+            sudo -u cvss python3 -m venv venv
+            
+            # Install dependencies
+            sudo -u cvss ./venv/bin/pip install --upgrade pip
+            sudo -u cvss ./venv/bin/pip install -r requirements.txt
+            
+            # Create .env file
+            sudo -u cvss cat > .env << EOF
+DATABASE_URL=postgresql://cvss_user:cvss_password@localhost:5432/cvss_db
+SQLALCHEMY_DATABASE_URI=postgresql://cvss_user:cvss_password@localhost:5432/cvss_db
+JWT_SECRET_KEY=your-production-jwt-secret-key-here
+FLASK_ENV=production
+FLASK_DEBUG=False
+SECRET_KEY=your-production-secret-key-here
+CORS_ORIGINS=http://0.0.0.0:5000
+MAX_CONTENT_LENGTH=16777216
+UPLOAD_FOLDER=uploads
+API_VERSION=v1
+EOF
+            
+            # Initialize database
+            sudo -u cvss ./venv/bin/python init_db.py
+            
+            echo "✅ Backend setup completed"
+
+      - name: "Setup Frontend"
+        action: "shell"
+        inputs:
+          script: |
+            #!/bin/bash
+            echo "🎨 Setting up frontend..."
+            
+            cd /opt/cvss-system/frontend
+            
+            # Install dependencies
+            sudo -u cvss npm ci
+            
+            # Create .env file
+            sudo -u cvss cat > .env << EOF
+VITE_API_URL=http://0.0.0.0:5000/api
+VITE_APP_NAME=CVSS Scoring System
+VITE_APP_VERSION=1.0.0
+VITE_DEV_MODE=false
+EOF
+            
+            # Build application
+            sudo -u cvss npm run build
+            
+            echo "✅ Frontend setup completed"
+
+  - name: "Service Configuration"
+    steps:
+      - name: "Create Systemd Services"
+        action: "shell"
+        inputs:
+          script: |
+            #!/bin/bash
+            echo "⚙️ Creating systemd services..."
+            
+            # Backend service
+            cat > /etc/systemd/system/cvss-backend.service << EOF
+[Unit]
+Description=CVSS System Backend
+After=network.target postgresql.service
+
+[Service]
+Type=simple
+User=cvss
+WorkingDirectory=/opt/cvss-system/backend
+Environment=PATH=/opt/cvss-system/backend/venv/bin
+ExecStart=/opt/cvss-system/backend/venv/bin/python run.py
+Restart=always
+RestartSec=10
+StandardOutput=append:/var/log/cvss-system/backend.log
+StandardError=append:/var/log/cvss-system/backend-error.log
+
+[Install]
+WantedBy=multi-user.target
+EOF
+            
+            # Frontend service
+            cat > /etc/systemd/system/cvss-frontend.service << EOF
+[Unit]
+Description=CVSS System Frontend
+After=network.target cvss-backend.service
+
+[Service]
+Type=simple
+User=cvss
+WorkingDirectory=/opt/cvss-system/frontend
+Environment=PATH=/usr/bin:/usr/local/bin
+ExecStart=/usr/bin/npm run dev
+Restart=always
+RestartSec=10
+StandardOutput=append:/var/log/cvss-system/frontend.log
+StandardError=append:/var/log/cvss-system/frontend-error.log
+
+[Install]
+WantedBy=multi-user.target
+EOF
+            
+            # Reload systemd
+            systemctl daemon-reload
+            
+            echo "✅ Systemd services created"
+
+      - name: "Configure Firewall"
+        action: "shell"
+        inputs:
+          script: |
+            #!/bin/bash
+            echo "🔥 Configuring firewall..."
+            
+            # Install firewalld
+            yum install -y firewalld
+            
+            # Start and enable firewalld
+            systemctl start firewalld
+            systemctl enable firewalld
+            
+            # Open ports
+            firewall-cmd --permanent --add-port=5000/tcp  # Backend
+            firewall-cmd --permanent --add-port=3000/tcp  # Frontend
+            firewall-cmd --permanent --add-port=22/tcp    # SSH
+            firewall-cmd --permanent --add-port=80/tcp    # HTTP
+            firewall-cmd --permanent --add-port=443/tcp   # HTTPS
+            
+            # Reload firewall
+            firewall-cmd --reload
+            
+            echo "✅ Firewall configured"
+
+  - name: "Start Services"
+    steps:
+      - name: "Start Application Services"
+        action: "shell"
+        inputs:
+          script: |
+            #!/bin/bash
+            echo "🚀 Starting application services..."
+            
+            # Start and enable services
+            systemctl start cvss-backend
+            systemctl enable cvss-backend
+            
+            systemctl start cvss-frontend
+            systemctl enable cvss-frontend
+            
+            # Check status
+            systemctl status cvss-backend --no-pager
+            systemctl status cvss-frontend --no-pager
+            
+            echo "✅ Services started successfully"
+
+      - name: "Health Check"
+        action: "shell"
+        inputs:
+          script: |
+            #!/bin/bash
+            echo "🏥 Running health checks..."
+            
+            # Wait for services to start
+            sleep 30
+            
+            # Check backend
+            if curl -f "http://localhost:5000/api/health" > /dev/null 2>&1; then
+                echo "✅ Backend health check passed"
+            else
+                echo "❌ Backend health check failed"
+                # Show backend logs for debugging
+                echo "Backend logs:"
+                tail -20 /var/log/cvss-system/backend.log
+                exit 1
+            fi
+            
+            # Check frontend
+            if curl -f "http://localhost:3000" > /dev/null 2>&1; then
+                echo "✅ Frontend health check passed"
+            else
+                echo "❌ Frontend health check failed"
+                # Show frontend logs for debugging
+                echo "Frontend logs:"
+                tail -20 /var/log/cvss-system/frontend.log
+                exit 1
+            fi
+            
+            echo "✅ All health checks passed"
+
+      - name: "Cleanup"
+        action: "shell"
+        inputs:
+          script: |
+            #!/bin/bash
+            echo "🧹 Cleaning up temporary files..."
+            
+            # Remove temporary files
+            rm -rf /tmp/cvss-system
+            
+            # Clean package caches
+            npm cache clean --force
+            
+            echo "✅ Cleanup completed"
+            echo ""
+            echo "🎉 CVSS System deployed successfully!"
+            echo "Backend: http://localhost:5000"
+            echo "Frontend: http://localhost:3000"

@@ -1,0 +1,208 @@
+# CodeArts Quality Gate Configuration for Huawei Cloud
+# CVSS Scoring System Quality Standards
+
+quality_gate:
+  name: "CVSS-System-Quality-Gate"
+  description: "Quality gate for CVSS Scoring System deployment"
+  
+  # Code Coverage Requirements
+  coverage:
+    minimum_coverage: 80
+    backend_coverage: 96
+    frontend_coverage: 70
+    
+  # Security Requirements
+  security:
+    max_vulnerabilities: 0
+    max_security_hotspots: 0
+    max_bugs: 0
+    max_code_smells: 10
+    
+  # Performance Requirements
+  performance:
+    max_duplicated_lines: 5
+    max_duplicated_blocks: 3
+    max_duplicated_files: 2
+    
+  # Maintainability
+  maintainability:
+    max_technical_debt: "1h"
+    max_complexity: 10
+    max_cognitive_complexity: 15
+    
+  # Reliability
+  reliability:
+    max_bugs: 0
+    max_reliability_rating: "A"
+    
+  # Conditions for Quality Gate
+  conditions:
+    - metric: "coverage"
+      operator: "GREATER_THAN"
+      threshold: 80
+      description: "Code coverage must be above 80%"
+      
+    - metric: "vulnerabilities"
+      operator: "EQUALS"
+      threshold: 0
+      description: "No security vulnerabilities allowed"
+      
+    - metric: "bugs"
+      operator: "EQUALS"
+      threshold: 0
+      description: "No bugs allowed in production"
+      
+    - metric: "security_hotspots"
+      operator: "EQUALS"
+      threshold: 0
+      description: "No security hotspots allowed"
+      
+    - metric: "duplicated_lines_density"
+      operator: "LESS_THAN"
+      threshold: 5
+      description: "Code duplication must be less than 5%"
+      
+    - metric: "technical_debt"
+      operator: "LESS_THAN"
+      threshold: "1h"
+      description: "Technical debt must be less than 1 hour"
+
+# SonarQube Configuration for CodeArts
+sonar:
+  project_key: "cvss-scoring-system"
+  project_name: "CVSS Scoring System"
+  project_version: "1.0.0"
+  
+  # Source code paths
+  sources:
+    - "backend/app"
+    - "frontend/src"
+    
+  # Test paths
+  tests:
+    - "backend/tests"
+    - "frontend/src/__tests__"
+    
+  # Coverage reports
+  coverage_reports:
+    backend: "backend/coverage.xml"
+    frontend: "frontend/coverage/lcov.info"
+    
+  # Exclusions
+  exclusions:
+    - "**/node_modules/**"
+    - "**/venv/**"
+    - "**/__pycache__/**"
+    - "**/dist/**"
+    - "**/build/**"
+    - "**/*.min.js"
+    - "**/*.min.css"
+
+# CodeArts Specific Configuration
+codearts:
+  # Build configuration
+  build:
+    image: "centos:7"
+    python_version: "3.12"
+    node_version: "18"
+    
+  # Deployment configuration
+  deployment:
+    target_environment: "ECS"
+    os: "CentOS"
+    python_path: "/usr/bin/python3.12"
+    node_path: "/usr/bin/node"
+    
+  # Notification settings
+  notifications:
+    email: "admin@example.com"
+    webhook: "https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK"
+    
+  # Artifact storage
+  artifacts:
+    backend_coverage: "backend/htmlcov/"
+    frontend_coverage: "frontend/coverage/"
+    test_reports: "test-results/"
+    security_reports: "security-reports/"
+
+# Huawei Cloud ECS Configuration
+ecs:
+  # Instance configuration
+  instance_type: "c6.large.2"
+  image_id: "CentOS 7.9"
+  vpc_id: "your-vpc-id"
+  subnet_id: "your-subnet-id"
+  security_group_id: "your-security-group-id"
+  
+  # Storage configuration
+  system_disk:
+    type: "SSD"
+    size: "40GB"
+    
+  data_disk:
+    type: "SSD"
+    size: "100GB"
+    
+  # Network configuration
+  bandwidth:
+    size: "5Mbps"
+    type: "PER"
+    
+  # Security configuration
+  key_pair: "your-key-pair"
+  password: "your-ecs-password"
+  
+  # Application ports
+  ports:
+    backend: 5000
+    frontend: 3000
+    database: 5432
+    
+  # Environment variables
+  environment:
+    DATABASE_URL: "postgresql://cvss_user:cvss_password@localhost:5432/cvss_db"
+    JWT_SECRET_KEY: "your-production-jwt-secret"
+    FLASK_ENV: "production"
+    SECRET_KEY: "your-production-secret-key"
+    CORS_ORIGINS: "https://your-domain.com"
+    VITE_API_URL: "https://your-api-domain.com/api"
+
+# Monitoring and Logging
+monitoring:
+  # Application monitoring
+  app_monitoring:
+    enabled: true
+    metrics_endpoint: "/api/metrics"
+    health_endpoint: "/api/health"
+    
+  # Logging configuration
+  logging:
+    level: "INFO"
+    format: "json"
+    output: "/var/log/cvss-system/"
+    
+    # Log rotation
+    rotation:
+      max_size: "100MB"
+      backup_count: 5
+      
+  # Performance monitoring
+  performance:
+    enabled: true
+    metrics:
+      - "response_time"
+      - "throughput"
+      - "error_rate"
+      - "cpu_usage"
+      - "memory_usage"
+      - "disk_usage"
+      
+  # Alerting
+  alerts:
+    enabled: true
+    thresholds:
+      cpu_usage: 80
+      memory_usage: 85
+      disk_usage: 90
+      error_rate: 5
+      response_time: 2000

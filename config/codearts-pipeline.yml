@@ -1,0 +1,302 @@
+# CodeArts Pipeline Configuration for CVSS System
+# Huawei Cloud CodeArts CI/CD Pipeline
+# CentOS ECS Deployment Configuration
+
+version: '3.8'
+
+stages:
+  - name: "Source Code Checkout"
+    steps:
+      - name: "Checkout Code"
+        action: "checkout"
+        inputs:
+          repository: "https://github.com/ushio2580/CVSS3.1-System.git"
+          branch: "main"
+          credentials: "github-token"
+
+  - name: "Environment Setup"
+    steps:
+      - name: "Setup CentOS Environment"
+        action: "shell"
+        inputs:
+          script: |
+            #!/bin/bash
+            echo "🚀 Setting up CentOS environment for CVSS System"
+            
+            # Update system packages
+            sudo yum update -y
+            
+            # Install Python 3.12
+            sudo yum install -y python3.12 python3.12-pip python3.12-devel
+            
+            # Install Node.js 18
+            curl -fsSL https://rpm.nodesource.com/setup_18.x | sudo bash -
+            sudo yum install -y nodejs
+            
+            # Install PostgreSQL client
+            sudo yum install -y postgresql postgresql-devel
+            
+            # Install Git
+            sudo yum install -y git
+            
+            # Install build tools
+            sudo yum groupinstall -y "Development Tools"
+            
+            # Verify installations
+            python3.12 --version
+            node --version
+            npm --version
+            git --version
+
+  - name: "Backend Build & Test"
+    steps:
+      - name: "Setup Backend Environment"
+        action: "shell"
+        inputs:
+          script: |
+            #!/bin/bash
+            echo "🔧 Setting up backend environment"
+            
+            cd backend
+            
+            # Create virtual environment
+            python3.12 -m venv venv
+            source venv/bin/activate
+            
+            # Upgrade pip
+            pip install --upgrade pip
+            
+            # Install dependencies
+            pip install -r requirements.txt
+            
+            # Install test dependencies
+            pip install pytest pytest-cov pytest-html
+            
+            echo "✅ Backend environment ready"
+
+      - name: "Run Backend Tests"
+        action: "shell"
+        inputs:
+          script: |
+            #!/bin/bash
+            echo "🧪 Running backend tests"
+            
+            cd backend
+            source venv/bin/activate
+            
+            # Run tests with coverage
+            python -m pytest tests/ -v \
+              --cov=. \
+              --cov-report=xml \
+              --cov-report=html \
+              --cov-report=term \
+              --junitxml=test-results.xml
+            
+            echo "✅ Backend tests completed"
+
+      - name: "Backend Quality Check"
+        action: "shell"
+        inputs:
+          script: |
+            #!/bin/bash
+            echo "🔍 Running backend quality checks"
+            
+            cd backend
+            source venv/bin/activate
+            
+            # Code quality checks
+            pip install flake8 black isort
+            
+            # Format check
+            black --check .
+            
+            # Import sorting check
+            isort --check-only .
+            
+            # Linting
+            flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+            
+            echo "✅ Backend quality checks passed"
+
+  - name: "Frontend Build & Test"
+    steps:
+      - name: "Setup Frontend Environment"
+        action: "shell"
+        inputs:
+          script: |
+            #!/bin/bash
+            echo "🔧 Setting up frontend environment"
+            
+            cd frontend
+            
+            # Install dependencies
+            npm ci
+            
+            echo "✅ Frontend environment ready"
+
+      - name: "Run Frontend Tests"
+        action: "shell"
+        inputs:
+          script: |
+            #!/bin/bash
+            echo "🧪 Running frontend tests"
+            
+            cd frontend
+            
+            # Run tests
+            npm test -- --watchAll=false --coverage --coverageReporters=lcov
+            
+            echo "✅ Frontend tests completed"
+
+      - name: "Build Frontend"
+        action: "shell"
+        inputs:
+          script: |
+            #!/bin/bash
+            echo "🏗️ Building frontend"
+            
+            cd frontend
+            
+            # Build application
+            npm run build
+            
+            echo "✅ Frontend build completed"
+
+  - name: "Security Scan"
+    steps:
+      - name: "Backend Security Scan"
+        action: "shell"
+        inputs:
+          script: |
+            #!/bin/bash
+            echo "🔒 Running backend security scan"
+            
+            cd backend
+            source venv/bin/activate
+            
+            # Install security tools
+            pip install bandit safety
+            
+            # Security scan
+            bandit -r . -f json -o security-report.json
+            
+            # Dependency vulnerability check
+            safety check --json --output safety-report.json
+            
+            echo "✅ Backend security scan completed"
+
+      - name: "Frontend Security Scan"
+        action: "shell"
+        inputs:
+          script: |
+            #!/bin/bash
+            echo "🔒 Running frontend security scan"
+            
+            cd frontend
+            
+            # Install audit tools
+            npm audit --audit-level=moderate --json > security-audit.json
+            
+            echo "✅ Frontend security scan completed"
+
+  - name: "Database Setup"
+    steps:
+      - name: "Setup Database"
+        action: "shell"
+        inputs:
+          script: |
+            #!/bin/bash
+            echo "🗄️ Setting up database"
+            
+            # Set database environment variables
+            export DATABASE_URL="postgresql://cvss_user:cvss_password@localhost:5432/cvss_db"
+            export SQLALCHEMY_DATABASE_URI="postgresql://cvss_user:cvss_password@localhost:5432/cvss_db"
+            
+            cd backend
+            source venv/bin/activate
+            
+            # Initialize database
+            python init_db.py
+            
+            echo "✅ Database setup completed"
+
+  - name: "Deploy to ECS"
+    steps:
+      - name: "Prepare Deployment"
+        action: "shell"
+        inputs:
+          script: |
+            #!/bin/bash
+            echo "🚀 Preparing deployment to ECS"
+            
+            # Create deployment directory
+            sudo mkdir -p /opt/cvss-system
+            sudo chown $USER:$USER /opt/cvss-system
+            
+            # Copy application files
+            cp -r backend /opt/cvss-system/
+            cp -r frontend /opt/cvss-system/
+            cp docker-compose.yml /opt/cvss-system/
+            cp install.sh /opt/cvss-system/
+            
+            echo "✅ Deployment files prepared"
+
+      - name: "Deploy Application"
+        action: "shell"
+        inputs:
+          script: |
+            #!/bin/bash
+            echo "🚀 Deploying application to ECS"
+            
+            cd /opt/cvss-system
+            
+            # Make install script executable
+            chmod +x install.sh
+            
+            # Run installation
+            ./install.sh
+            
+            # Start services
+            cd backend
+            source venv/bin/activate
+            nohup python run.py > /var/log/cvss-backend.log 2>&1 &
+            
+            cd ../frontend
+            nohup npm run dev > /var/log/cvss-frontend.log 2>&1 &
+            
+            echo "✅ Application deployed successfully"
+
+      - name: "Health Check"
+        action: "shell"
+        inputs:
+          script: |
+            #!/bin/bash
+            echo "🏥 Running health checks"
+            
+            # Wait for services to start
+            sleep 30
+            
+            # Check backend health
+            curl -f http://localhost:5000/api/health || exit 1
+            
+            # Check frontend health
+            curl -f http://localhost:3000 || exit 1
+            
+            echo "✅ Health checks passed"
+
+  - name: "Cleanup"
+    steps:
+      - name: "Cleanup Build Artifacts"
+        action: "shell"
+        inputs:
+          script: |
+            #!/bin/bash
+            echo "🧹 Cleaning up build artifacts"
+            
+            # Remove temporary files
+            rm -rf /tmp/cvss-build-*
+            
+            # Clean package caches
+            npm cache clean --force
+            
+            echo "✅ Cleanup completed"
