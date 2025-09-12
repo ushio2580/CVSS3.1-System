@@ -1,0 +1,225 @@
+# CodeArts SWR Deploy Configuration for CVSS System
+# This configuration deploys Docker images from SWR to ECS CentOS 7.6
+
+version: '3.8'
+
+stages:
+  - name: "Deploy from SWR"
+    steps:
+      - name: "Install Docker on ECS"
+        action: "shell"
+        inputs:
+          script: |
+            #!/bin/bash
+            set -e
+            
+            echo "=== Installing Docker on CentOS 7.6 ==="
+            
+            # Update system
+            yum update -y
+            
+            # Install Docker
+            yum install -y yum-utils
+            yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+            yum install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+            
+            # Start Docker
+            systemctl start docker
+            systemctl enable docker
+            
+            # Configure Docker to use SWR
+            echo "=== Configuring Docker for SWR ==="
+            
+            # Login to SWR (you'll need to configure credentials)
+            # docker login swr.cn-north-4.myhuaweicloud.com
+            
+            echo "✅ Docker installed and configured for SWR"
+            
+      - name: "Pull Images from SWR"
+        action: "shell"
+        inputs:
+          script: |
+            #!/bin/bash
+            set -e
+            
+            echo "=== Pulling Images from SWR ==="
+            
+            # Login to SWR (configure your credentials)
+            # docker login swr.cn-north-4.myhuaweicloud.com
+            
+            # Pull images from SWR
+            docker pull swr.cn-north-4.myhuaweicloud.com/cvss-system/cvss-backend:latest
+            docker pull swr.cn-north-4.myhuaweicloud.com/cvss-system/cvss-frontend:latest
+            
+            # Tag images for local use
+            docker tag swr.cn-north-4.myhuaweicloud.com/cvss-system/cvss-backend:latest cvss-backend:latest
+            docker tag swr.cn-north-4.myhuaweicloud.com/cvss-system/cvss-frontend:latest cvss-frontend:latest
+            
+            echo "✅ Images pulled from SWR successfully"
+            
+      - name: "Deploy with Docker Compose"
+        action: "shell"
+        inputs:
+          script: |
+            #!/bin/bash
+            set -e
+            
+            echo "=== Deploying CVSS System from SWR Images ==="
+            
+            # Create deployment directory
+            mkdir -p /opt/cvss-system
+            cd /opt/cvss-system
+            
+            # Create docker-compose.yml for deployment
+            cat > docker-compose.yml << 'EOF'
+            version: '3.8'
+            
+            services:
+              postgres:
+                image: postgres:15-alpine
+                container_name: cvss-postgres
+                environment:
+                  POSTGRES_DB: cvss_db
+                  POSTGRES_USER: cvss_user
+                  POSTGRES_PASSWORD: cvss_password
+                volumes:
+                  - postgres_data:/var/lib/postgresql/data
+                ports:
+                  - "5432:5432"
+                restart: unless-stopped
+                healthcheck:
+                  test: ["CMD-SHELL", "pg_isready -U cvss_user -d cvss_db"]
+                  interval: 30s
+                  timeout: 10s
+                  retries: 3
+            
+              backend:
+                image: cvss-backend:latest
+                container_name: cvss-backend
+                environment:
+                  DATABASE_URL: postgresql://cvss_user:cvss_password@postgres:5432/cvss_db
+                  SQLALCHEMY_DATABASE_URI: postgresql://cvss_user:cvss_password@postgres:5432/cvss_db
+                  JWT_SECRET_KEY: your-production-jwt-secret-key-here
+                  FLASK_ENV: production
+                  FLASK_DEBUG: "False"
+                  SECRET_KEY: your-production-secret-key-here
+                  CORS_ORIGINS: http://0.0.0.0:5000
+                  MAX_CONTENT_LENGTH: "16777216"
+                  UPLOAD_FOLDER: uploads
+                  API_VERSION: v1
+                ports:
+                  - "5000:5000"
+                volumes:
+                  - backend_uploads:/app/uploads
+                  - backend_logs:/app/logs
+                depends_on:
+                  postgres:
+                    condition: service_healthy
+                restart: unless-stopped
+                healthcheck:
+                  test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+                  interval: 30s
+                  timeout: 10s
+                  retries: 3
+            
+              frontend:
+                image: cvss-frontend:latest
+                container_name: cvss-frontend
+                environment:
+                  VITE_API_URL: http://0.0.0.0:5000/api
+                  VITE_APP_NAME: CVSS Scoring System
+                  VITE_APP_VERSION: 1.0.0
+                  VITE_DEV_MODE: "false"
+                ports:
+                  - "3000:3000"
+                depends_on:
+                  - backend
+                restart: unless-stopped
+                healthcheck:
+                  test: ["CMD", "curl", "-f", "http://localhost:3000"]
+                  interval: 30s
+                  timeout: 10s
+                  retries: 3
+            
+            volumes:
+              postgres_data:
+              backend_uploads:
+              backend_logs:
+            EOF
+            
+            # Stop existing containers
+            docker-compose down || echo "No existing containers"
+            
+            # Start services
+            docker-compose up -d
+            
+            # Wait for services to start
+            echo "Waiting for services to start..."
+            sleep 60
+            
+            # Check service status
+            echo "Checking service status..."
+            docker-compose ps
+            
+            # Health check
+            echo "Running health checks..."
+            
+            # Check backend
+            if curl -f http://localhost:5000/api/health > /dev/null 2>&1; then
+                echo "✅ Backend health check passed"
+            else
+                echo "❌ Backend health check failed"
+                docker-compose logs backend
+                exit 1
+            fi
+            
+            # Check frontend
+            if curl -f http://localhost:3000 > /dev/null 2>&1; then
+                echo "✅ Frontend health check passed"
+            else
+                echo "❌ Frontend health check failed"
+                docker-compose logs frontend
+                exit 1
+            fi
+            
+            echo ""
+            echo "🎉 CVSS System deployed successfully from SWR!"
+            echo ""
+            echo "📊 Application URLs:"
+            echo "  Backend: http://localhost:5000"
+            echo "  Frontend: http://localhost:3000"
+            echo ""
+            echo "📝 Docker Management:"
+            echo "  Status: docker-compose ps"
+            echo "  Logs: docker-compose logs"
+            echo "  Stop: docker-compose down"
+            echo ""
+            echo "✅ SWR deployment completed successfully!"
+            
+      - name: "Configure Firewall"
+        action: "shell"
+        inputs:
+          script: |
+            #!/bin/bash
+            set -e
+            
+            echo "=== Configuring Firewall ==="
+            
+            # Install and configure firewall
+            yum install -y firewalld
+            systemctl start firewalld
+            systemctl enable firewalld
+            
+            # Open required ports
+            firewall-cmd --permanent --add-port=5000/tcp
+            firewall-cmd --permanent --add-port=3000/tcp
+            firewall-cmd --permanent --add-port=5432/tcp
+            firewall-cmd --permanent --add-port=22/tcp
+            firewall-cmd --permanent --add-port=80/tcp
+            firewall-cmd --permanent --add-port=443/tcp
+            
+            # Reload firewall
+            firewall-cmd --reload
+            
+            echo "✅ Firewall configured successfully"
+            echo "Ports opened: 22, 80, 443, 3000, 5000, 5432"

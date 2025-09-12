@@ -1,0 +1,41 @@
+# SWR Build Configuration for CVSS System
+# This configuration builds Docker images in SWR and prepares for ECS deployment
+
+version: '3.8'
+
+services:
+  cvss-backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.backend
+    image: swr.cn-north-4.myhuaweicloud.com/cvss-system/cvss-backend:latest
+    tags:
+      - "latest"
+      - "v1.0.0"
+    
+  cvss-frontend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.frontend
+    image: swr.cn-north-4.myhuaweicloud.com/cvss-system/cvss-frontend:latest
+    tags:
+      - "latest"
+      - "v1.0.0"
+
+# Build configuration for SWR
+build:
+  backend:
+    context: .
+    dockerfile: docker/Dockerfile.backend
+    push: true
+    tags:
+      - "swr.cn-north-4.myhuaweicloud.com/cvss-system/cvss-backend:latest"
+      - "swr.cn-north-4.myhuaweicloud.com/cvss-system/cvss-backend:v1.0.0"
+  
+  frontend:
+    context: .
+    dockerfile: docker/Dockerfile.frontend
+    push: true
+    tags:
+      - "swr.cn-north-4.myhuaweicloud.com/cvss-system/cvss-frontend:latest"
+      - "swr.cn-north-4.myhuaweicloud.com/cvss-system/cvss-frontend:v1.0.0"
