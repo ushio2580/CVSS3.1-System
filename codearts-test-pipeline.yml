@@ -1,0 +1,15 @@
+version: '3.8'
+
+stages:
+  - name: "Test Deploy"
+    steps:
+      - name: "Simple Test"
+        action: "shell"
+        inputs:
+          script: |
+            #!/bin/bash
+            echo "Hello from CodeArts!"
+            echo "Current directory: $(pwd)"
+            echo "Available files:"
+            ls -la
+            echo "Test completed successfully!"

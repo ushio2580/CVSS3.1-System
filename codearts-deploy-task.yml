@@ -1,0 +1,122 @@
+# CodeArts Deploy Task Configuration for CVSS System
+# This task deploys the built application to the ECS instance
+
+version: '3.8'
+
+stages:
+  - name: "Deploy CVSS System"
+    steps:
+      - name: "Deploy Application"
+        action: "shell"
+        inputs:
+          script: |
+            #!/bin/bash
+            set -e
+            
+            echo "=== Deploying CVSS System ==="
+            
+            # Check if build artifacts exist
+            if [ ! -f "/tmp/cvss-system-build.tar.gz" ]; then
+                echo "❌ Build artifacts not found. Please run Build Task first."
+                exit 1
+            fi
+            
+            if [ ! -f "/tmp/deploy.sh" ]; then
+                echo "❌ Deploy script not found. Please run Build Task first."
+                exit 1
+            fi
+            
+            # Extract build artifacts
+            echo "Extracting build artifacts..."
+            cd /opt
+            tar -xzf /tmp/cvss-system-build.tar.gz
+            
+            # Install systemd services
+            echo "Installing systemd services..."
+            cp /tmp/cvss-backend.service /etc/systemd/system/
+            cp /tmp/cvss-frontend.service /etc/systemd/system/
+            systemctl daemon-reload
+            
+            # Configure firewall
+            echo "Configuring firewall..."
+            yum install -y firewalld
+            systemctl start firewalld
+            systemctl enable firewalld
+            firewall-cmd --permanent --add-port=5000/tcp
+            firewall-cmd --permanent --add-port=3000/tcp
+            firewall-cmd --permanent --add-port=22/tcp
+            firewall-cmd --permanent --add-port=80/tcp
+            firewall-cmd --permanent --add-port=443/tcp
+            firewall-cmd --reload
+            
+            # Start services
+            echo "Starting services..."
+            systemctl start cvss-backend
+            systemctl enable cvss-backend
+            systemctl start cvss-frontend
+            systemctl enable cvss-frontend
+            
+            # Wait and check services
+            echo "Waiting for services to start..."
+            sleep 30
+            
+            echo "Checking service status..."
+            systemctl status cvss-backend --no-pager
+            systemctl status cvss-frontend --no-pager
+            
+            # Health check
+            echo "Running health checks..."
+            
+            # Check backend
+            if curl -f http://localhost:5000/api/health > /dev/null 2>&1; then
+                echo "✅ Backend health check passed"
+            else
+                echo "❌ Backend health check failed"
+                echo "Backend logs:"
+                tail -20 /var/log/cvss-system/backend.log
+                exit 1
+            fi
+            
+            # Check frontend
+            if curl -f http://localhost:3000 > /dev/null 2>&1; then
+                echo "✅ Frontend health check passed"
+            else
+                echo "❌ Frontend health check failed"
+                echo "Frontend logs:"
+                tail -20 /var/log/cvss-system/frontend.log
+                exit 1
+            fi
+            
+            echo ""
+            echo "🎉 CVSS System deployed successfully!"
+            echo ""
+            echo "📊 Application URLs:"
+            echo "  Backend: http://localhost:5000"
+            echo "  Frontend: http://localhost:3000"
+            echo ""
+            echo "📝 Service Management:"
+            echo "  Backend: systemctl status cvss-backend"
+            echo "  Frontend: systemctl status cvss-frontend"
+            echo ""
+            echo "📋 Logs:"
+            echo "  Backend: tail -f /var/log/cvss-system/backend.log"
+            echo "  Frontend: tail -f /var/log/cvss-system/frontend.log"
+            echo ""
+            echo "✅ Deployment completed successfully!"
+            
+      - name: "Cleanup Build Artifacts"
+        action: "shell"
+        inputs:
+          script: |
+            #!/bin/bash
+            set -e
+            
+            echo "=== Cleaning up build artifacts ==="
+            
+            # Remove temporary files
+            rm -f /tmp/cvss-system-build.tar.gz
+            rm -f /tmp/deploy.sh
+            rm -f /tmp/cvss-backend.service
+            rm -f /tmp/cvss-frontend.service
+            
+            echo "✅ Build artifacts cleaned up successfully"
