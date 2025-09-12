@@ -1,0 +1,234 @@
+{
+  "project": {
+    "name": "CVSS Scoring System",
+    "version": "1.0",
+    "description": "Sistema de evaluación de vulnerabilidades CVSS con Document Analyzer",
+    "language": "python",
+    "framework": "flask"
+  },
+  "quality_gate": {
+    "name": "CVSS Quality Gate",
+    "rules": [
+      {
+        "metric": "coverage",
+        "operator": ">=",
+        "value": 80,
+        "description": "Code coverage must be at least 80%"
+      },
+      {
+        "metric": "duplicated_lines_density",
+        "operator": "<=",
+        "value": 3.0,
+        "description": "Duplicated lines density must be less than 3%"
+      },
+      {
+        "metric": "security_hotspots",
+        "operator": "=",
+        "value": 0,
+        "description": "No security hotspots allowed"
+      },
+      {
+        "metric": "bugs",
+        "operator": "=",
+        "value": 0,
+        "description": "No bugs allowed"
+      },
+      {
+        "metric": "vulnerabilities",
+        "operator": "=",
+        "value": 0,
+        "description": "No vulnerabilities allowed"
+      }
+    ]
+  },
+  "test_cases": [
+    {
+      "id": "TC-AUTH-001",
+      "name": "Login Exitoso",
+      "category": "functional",
+      "priority": "high",
+      "description": "Verificar que un usuario puede iniciar sesión con credenciales válidas",
+      "steps": [
+        "Navegar a la página de login",
+        "Ingresar email válido",
+        "Ingresar password válido",
+        "Hacer clic en Login"
+      ],
+      "expected_result": "Usuario es redirigido al dashboard",
+      "test_file": "backend/tests/test_auth.py::test_login_success"
+    },
+    {
+      "id": "TC-AUTH-002",
+      "name": "Login con Credenciales Inválidas",
+      "category": "functional",
+      "priority": "high",
+      "description": "Verificar que el sistema rechaza credenciales incorrectas",
+      "steps": [
+        "Navegar a la página de login",
+        "Ingresar email inválido",
+        "Ingresar password inválido",
+        "Hacer clic en Login"
+      ],
+      "expected_result": "Mensaje de error se muestra",
+      "test_file": "backend/tests/test_auth.py::test_login_invalid_credentials"
+    },
+    {
+      "id": "TC-DASH-001",
+      "name": "Visualización del Dashboard",
+      "category": "functional",
+      "priority": "high",
+      "description": "Verificar que el dashboard se carga correctamente",
+      "steps": [
+        "Iniciar sesión en el sistema",
+        "Navegar al dashboard"
+      ],
+      "expected_result": "Dashboard se carga sin errores",
+      "test_file": "frontend/src/__tests__/Dashboard.test.tsx::test_dashboard_renders"
+    },
+    {
+      "id": "TC-VULN-001",
+      "name": "Crear Nueva Vulnerabilidad",
+      "category": "functional",
+      "priority": "high",
+      "description": "Verificar que se puede crear una nueva vulnerabilidad",
+      "steps": [
+        "Navegar a Vulnerabilities",
+        "Hacer clic en Add New Vulnerability",
+        "Llenar formulario con datos válidos",
+        "Hacer clic en Save"
+      ],
+      "expected_result": "Vulnerabilidad se crea exitosamente",
+      "test_file": "backend/tests/test_vulnerabilities.py::test_create_vulnerability"
+    },
+    {
+      "id": "TC-CVSS-001",
+      "name": "Cálculo CVSS Básico",
+      "category": "functional",
+      "priority": "high",
+      "description": "Verificar que la calculadora CVSS funciona correctamente",
+      "steps": [
+        "Navegar a CVSS Calculator",
+        "Seleccionar métricas base",
+        "Hacer clic en Calculate"
+      ],
+      "expected_result": "CVSS Score: 9.8, Severity: Critical",
+      "test_file": "backend/tests/test_cvss.py::test_cvss_basic_calculation"
+    },
+    {
+      "id": "TC-DOC-001",
+      "name": "Subir Archivo PDF",
+      "category": "functional",
+      "priority": "high",
+      "description": "Verificar que se puede subir un archivo PDF",
+      "steps": [
+        "Navegar a Document Analyzer",
+        "Hacer clic en Choose File",
+        "Seleccionar archivo PDF válido",
+        "Hacer clic en Analyze Document"
+      ],
+      "expected_result": "Archivo se sube correctamente",
+      "test_file": "backend/tests/test_document_analyzer.py::test_upload_pdf"
+    },
+    {
+      "id": "TC-DOC-003",
+      "name": "Análisis de Vulnerabilidades",
+      "category": "functional",
+      "priority": "high",
+      "description": "Verificar que el análisis detecta vulnerabilidades",
+      "steps": [
+        "Subir documento con vulnerabilidades",
+        "Ejecutar análisis",
+        "Revisar resultados"
+      ],
+      "expected_result": "Vulnerabilidades se detectan",
+      "test_file": "backend/tests/test_document_analyzer.py::test_vulnerability_analysis"
+    },
+    {
+      "id": "TC-VAL-001",
+      "name": "Validación de Campos Requeridos",
+      "category": "validation",
+      "priority": "high",
+      "description": "Verificar que campos requeridos se validan",
+      "steps": [
+        "Intentar crear vulnerabilidad sin título",
+        "Intentar crear vulnerabilidad sin descripción"
+      ],
+      "expected_result": "Mensajes de error se muestran",
+      "test_file": "backend/tests/test_validation.py::test_required_fields"
+    },
+    {
+      "id": "TC-SEC-001",
+      "name": "Acceso No Autorizado",
+      "category": "security",
+      "priority": "high",
+      "description": "Verificar que rutas protegidas requieren autenticación",
+      "steps": [
+        "Intentar acceder a /dashboard sin login",
+        "Intentar acceder a /vulnerabilities sin login"
+      ],
+      "expected_result": "Usuario es redirigido a login",
+      "test_file": "backend/tests/test_security.py::test_unauthorized_access"
+    },
+    {
+      "id": "TC-PERF-001",
+      "name": "Carga de Dashboard",
+      "category": "performance",
+      "priority": "medium",
+      "description": "Verificar que el dashboard carga en tiempo razonable",
+      "steps": [
+        "Navegar al dashboard",
+        "Medir tiempo de carga"
+      ],
+      "expected_result": "Dashboard carga en menos de 3 segundos",
+      "test_file": "backend/tests/test_performance.py::test_dashboard_load_time"
+    }
+  ],
+  "test_execution": {
+    "backend": {
+      "framework": "pytest",
+      "command": "cd backend && python -m pytest tests/ -v --cov=app --cov-report=xml --cov-report=html",
+      "coverage_file": "backend/coverage.xml",
+      "report_file": "backend/test-results.xml"
+    },
+    "frontend": {
+      "framework": "jest",
+      "command": "cd frontend && npm test -- --coverage --watchAll=false --testResultsProcessor=jest-junit",
+      "coverage_file": "frontend/coverage/lcov.info",
+      "report_file": "frontend/junit.xml"
+    }
+  },
+  "build_config": {
+    "backend": {
+      "install_command": "pip install -r backend/requirements.txt",
+      "test_command": "cd backend && python -m pytest tests/ -v --cov=app --cov-report=xml",
+      "build_command": "echo 'Backend build completed'"
+    },
+    "frontend": {
+      "install_command": "cd frontend && npm install",
+      "test_command": "cd frontend && npm test -- --coverage --watchAll=false",
+      "build_command": "cd frontend && npm run build"
+    }
+  },
+  "deployment": {
+    "backend_url": "https://cvss-scoring-system.onrender.com",
+    "frontend_url": "https://gleeful-vacherin-0740fc.netlify.app",
+    "health_check_endpoints": [
+      "/api/admin/health",
+      "/"
+    ]
+  },
+  "metrics": {
+    "code_coverage": {
+      "minimum": 80,
+      "target": 85
+    },
+    "test_success_rate": {
+      "minimum": 95,
+      "target": 98
+    },
+    "performance": {
+      "max_response_time": 3000,
+      "max_memory_usage": 512
+    }
+  }
+}

@@ -1,0 +1,443 @@
+# Huawei Cloud CodeArts Quality Gate Configuration
+# CVSS Scoring System - Test Execution Configuration
+
+version: 2.0
+
+# Quality Gate Rules
+quality_gate:
+  name: "CVSS Scoring System Quality Gate"
+  description: "Quality gate for CVSS Scoring System project"
+  
+  # Code Coverage Rules
+  code_coverage:
+    minimum_coverage: 80
+    unit_test_coverage: 85
+    integration_test_coverage: 75
+    
+  # Code Quality Rules
+  code_quality:
+    # SonarQube-like rules
+    maintainability_rating: "A"
+    reliability_rating: "A"
+    security_rating: "A"
+    security_hotspots: 0
+    code_smells: 50
+    bugs: 0
+    vulnerabilities: 0
+    duplicated_lines_density: 3.0
+    
+  # Test Execution Rules
+  test_execution:
+    unit_tests:
+      enabled: true
+      minimum_tests: 25
+      success_rate: 95
+      
+    integration_tests:
+      enabled: true
+      minimum_tests: 15
+      success_rate: 90
+      
+    e2e_tests:
+      enabled: true
+      minimum_tests: 10
+      success_rate: 85
+
+# Test Configuration
+test_config:
+  # Backend Tests (Python/Flask)
+  backend:
+    framework: "pytest"
+    test_directory: "backend/tests"
+    coverage_tool: "coverage"
+    requirements_file: "backend/requirements.txt"
+    
+    # Test Commands
+    install_command: "pip install -r backend/requirements.txt"
+    test_command: "cd backend && python -m pytest tests/ -v --cov=app --cov-report=xml"
+    coverage_report: "backend/coverage.xml"
+    
+    # Test Categories
+    test_categories:
+      - "unit_tests"
+      - "integration_tests"
+      - "api_tests"
+      
+  # Frontend Tests (React/TypeScript)
+  frontend:
+    framework: "jest"
+    test_directory: "frontend/src/__tests__"
+    coverage_tool: "jest"
+    requirements_file: "frontend/package.json"
+    
+    # Test Commands
+    install_command: "cd frontend && npm install"
+    test_command: "cd frontend && npm test -- --coverage --watchAll=false"
+    coverage_report: "frontend/coverage/lcov.info"
+    
+    # Test Categories
+    test_categories:
+      - "unit_tests"
+      - "component_tests"
+      - "integration_tests"
+
+# Test Cases Mapping
+test_cases:
+  # Authentication Tests
+  authentication:
+    - id: "TC-AUTH-001"
+      name: "Login Exitoso"
+      category: "functional"
+      priority: "high"
+      file: "backend/tests/test_auth.py::test_login_success"
+      
+    - id: "TC-AUTH-002"
+      name: "Login con Credenciales Inválidas"
+      category: "functional"
+      priority: "high"
+      file: "backend/tests/test_auth.py::test_login_invalid_credentials"
+      
+    - id: "TC-AUTH-003"
+      name: "Logout Exitoso"
+      category: "functional"
+      priority: "medium"
+      file: "backend/tests/test_auth.py::test_logout_success"
+
+  # Dashboard Tests
+  dashboard:
+    - id: "TC-DASH-001"
+      name: "Visualización del Dashboard"
+      category: "functional"
+      priority: "high"
+      file: "frontend/src/__tests__/Dashboard.test.tsx::test_dashboard_renders"
+      
+    - id: "TC-DASH-002"
+      name: "Navegación del Dashboard"
+      category: "functional"
+      priority: "high"
+      file: "frontend/src/__tests__/Dashboard.test.tsx::test_dashboard_navigation"
+
+  # Vulnerability Management Tests
+  vulnerabilities:
+    - id: "TC-VULN-001"
+      name: "Crear Nueva Vulnerabilidad"
+      category: "functional"
+      priority: "high"
+      file: "backend/tests/test_vulnerabilities.py::test_create_vulnerability"
+      
+    - id: "TC-VULN-002"
+      name: "Editar Vulnerabilidad Existente"
+      category: "functional"
+      priority: "high"
+      file: "backend/tests/test_vulnerabilities.py::test_edit_vulnerability"
+      
+    - id: "TC-VULN-003"
+      name: "Eliminar Vulnerabilidad"
+      category: "functional"
+      priority: "medium"
+      file: "backend/tests/test_vulnerabilities.py::test_delete_vulnerability"
+
+  # CVSS Calculator Tests
+  cvss_calculator:
+    - id: "TC-CVSS-001"
+      name: "Cálculo CVSS Básico"
+      category: "functional"
+      priority: "high"
+      file: "backend/tests/test_cvss.py::test_cvss_basic_calculation"
+      
+    - id: "TC-CVSS-002"
+      name: "Cálculo CVSS con Métricas Temporales"
+      category: "functional"
+      priority: "medium"
+      file: "backend/tests/test_cvss.py::test_cvss_temporal_calculation"
+
+  # Document Analyzer Tests
+  document_analyzer:
+    - id: "TC-DOC-001"
+      name: "Subir Archivo PDF"
+      category: "functional"
+      priority: "high"
+      file: "backend/tests/test_document_analyzer.py::test_upload_pdf"
+      
+    - id: "TC-DOC-002"
+      name: "Subir Archivo Word"
+      category: "functional"
+      priority: "high"
+      file: "backend/tests/test_document_analyzer.py::test_upload_word"
+      
+    - id: "TC-DOC-003"
+      name: "Análisis de Vulnerabilidades"
+      category: "functional"
+      priority: "high"
+      file: "backend/tests/test_document_analyzer.py::test_vulnerability_analysis"
+      
+    - id: "TC-DOC-004"
+      name: "Convertir a Vulnerabilidad"
+      category: "functional"
+      priority: "high"
+      file: "backend/tests/test_document_analyzer.py::test_convert_to_vulnerability"
+
+  # Analysis History Tests
+  analysis_history:
+    - id: "TC-HIST-001"
+      name: "Ver Historial de Análisis"
+      category: "functional"
+      priority: "medium"
+      file: "frontend/src/__tests__/DocumentAnalysisHistory.test.tsx::test_view_history"
+      
+    - id: "TC-HIST-002"
+      name: "Ver Detalles de Análisis"
+      category: "functional"
+      priority: "medium"
+      file: "frontend/src/__tests__/DocumentAnalysisHistory.test.tsx::test_view_details"
+
+  # Validation Tests
+  validation:
+    - id: "TC-VAL-001"
+      name: "Validación de Campos Requeridos"
+      category: "validation"
+      priority: "high"
+      file: "backend/tests/test_validation.py::test_required_fields"
+      
+    - id: "TC-VAL-002"
+      name: "Validación de Tipos de Archivo"
+      category: "validation"
+      priority: "high"
+      file: "backend/tests/test_validation.py::test_file_type_validation"
+
+  # Performance Tests
+  performance:
+    - id: "TC-PERF-001"
+      name: "Carga de Dashboard"
+      category: "performance"
+      priority: "medium"
+      file: "backend/tests/test_performance.py::test_dashboard_load_time"
+      
+    - id: "TC-PERF-002"
+      name: "Análisis de Documento Grande"
+      category: "performance"
+      priority: "medium"
+      file: "backend/tests/test_performance.py::test_large_document_analysis"
+
+  # Security Tests
+  security:
+    - id: "TC-SEC-001"
+      name: "Acceso No Autorizado"
+      category: "security"
+      priority: "high"
+      file: "backend/tests/test_security.py::test_unauthorized_access"
+      
+    - id: "TC-SEC-002"
+      name: "Validación de Token JWT"
+      category: "security"
+      priority: "high"
+      file: "backend/tests/test_security.py::test_jwt_token_validation"
+
+  # Responsive Design Tests
+  responsive:
+    - id: "TC-RESP-001"
+      name: "Dashboard en Móvil"
+      category: "ui-ux"
+      priority: "medium"
+      file: "frontend/src/__tests__/responsive.test.tsx::test_mobile_dashboard"
+      
+    - id: "TC-RESP-002"
+      name: "Formularios en Tablet"
+      category: "ui-ux"
+      priority: "medium"
+      file: "frontend/src/__tests__/responsive.test.tsx::test_tablet_forms"
+
+# Build Configuration
+build_config:
+  # Backend Build
+  backend:
+    language: "python"
+    version: "3.9"
+    build_tool: "pip"
+    build_command: "pip install -r backend/requirements.txt"
+    test_command: "cd backend && python -m pytest tests/ -v --cov=app --cov-report=xml"
+    
+  # Frontend Build
+  frontend:
+    language: "nodejs"
+    version: "18"
+    build_tool: "npm"
+    build_command: "cd frontend && npm install && npm run build"
+    test_command: "cd frontend && npm test -- --coverage --watchAll=false"
+
+# Deployment Configuration
+deployment:
+  # Backend Deployment
+  backend:
+    platform: "render"
+    url: "https://cvss-scoring-system.onrender.com"
+    health_check: "/api/admin/health"
+    
+  # Frontend Deployment
+  frontend:
+    platform: "netlify"
+    url: "https://gleeful-vacherin-0740fc.netlify.app"
+    health_check: "/"
+
+# Quality Metrics
+quality_metrics:
+  # Code Quality Metrics
+  code_quality:
+    maintainability_index: 85
+    cyclomatic_complexity: 10
+    cognitive_complexity: 15
+    technical_debt_ratio: 5.0
+    
+  # Test Metrics
+  test_metrics:
+    test_coverage: 85
+    test_success_rate: 95
+    test_execution_time: 300  # seconds
+    
+  # Security Metrics
+  security_metrics:
+    security_hotspots: 0
+    vulnerabilities: 0
+    security_rating: "A"
+    
+  # Performance Metrics
+  performance_metrics:
+    page_load_time: 3.0  # seconds
+    api_response_time: 200  # milliseconds
+    memory_usage: 512  # MB
+    cpu_usage: 50  # percentage
+
+# Notification Configuration
+notifications:
+  # Email Notifications
+  email:
+    enabled: true
+    recipients:
+      - "admin@cvss.com"
+      - "dev-team@cvss.com"
+    
+  # Slack Notifications
+  slack:
+    enabled: false
+    webhook_url: ""
+    channel: "#cvss-alerts"
+    
+  # Webhook Notifications
+  webhook:
+    enabled: false
+    url: ""
+    events:
+      - "test_failure"
+      - "quality_gate_failure"
+      - "deployment_success"
+
+# Schedule Configuration
+schedule:
+  # Daily Tests
+  daily:
+    enabled: true
+    time: "02:00"
+    timezone: "UTC"
+    tests:
+      - "unit_tests"
+      - "integration_tests"
+      
+  # Weekly Tests
+  weekly:
+    enabled: true
+    day: "sunday"
+    time: "03:00"
+    timezone: "UTC"
+    tests:
+      - "e2e_tests"
+      - "performance_tests"
+      - "security_tests"
+      
+  # On Commit Tests
+  on_commit:
+    enabled: true
+    tests:
+      - "unit_tests"
+      - "linting"
+      - "security_scan"
+
+# Environment Configuration
+environments:
+  # Development Environment
+  development:
+    backend_url: "http://localhost:5000"
+    frontend_url: "http://localhost:3000"
+    database_url: "sqlite:///dev.db"
+    
+  # Staging Environment
+  staging:
+    backend_url: "https://cvss-staging.onrender.com"
+    frontend_url: "https://cvss-staging.netlify.app"
+    database_url: "postgresql://staging_db"
+    
+  # Production Environment
+  production:
+    backend_url: "https://cvss-scoring-system.onrender.com"
+    frontend_url: "https://gleeful-vacherin-0740fc.netlify.app"
+    database_url: "postgresql://production_db"
+
+# Artifact Configuration
+artifacts:
+  # Test Reports
+  test_reports:
+    junit: "test-results.xml"
+    coverage: "coverage.xml"
+    html: "coverage-report.html"
+    
+  # Build Artifacts
+  build_artifacts:
+    backend: "backend/dist"
+    frontend: "frontend/dist"
+    
+  # Deployment Artifacts
+  deployment_artifacts:
+    docker_image: "cvss-scoring-system:latest"
+    deployment_script: "deploy.sh"
+
+# Integration Configuration
+integrations:
+  # SonarQube Integration
+  sonarqube:
+    enabled: true
+    url: "https://sonarcloud.io"
+    project_key: "cvss-scoring-system"
+    token: "${SONAR_TOKEN}"
+    
+  # GitHub Integration
+  github:
+    enabled: true
+    repository: "ushio2580/cvss-scoring-system"
+    token: "${GITHUB_TOKEN}"
+    
+  # Jira Integration
+  jira:
+    enabled: false
+    url: ""
+    project_key: "CVSS"
+    username: ""
+    password: ""
+
+# Custom Rules
+custom_rules:
+  # Code Style Rules
+  code_style:
+    max_line_length: 120
+    indent_size: 2
+    quote_style: "single"
+    
+  # Security Rules
+  security:
+    require_https: true
+    require_authentication: true
+    max_file_size: 10485760  # 10MB
+    
+  # Performance Rules
+  performance:
+    max_response_time: 3000  # 3 seconds
+    max_memory_usage: 512  # 512MB
+    max_cpu_usage: 80  # 80%
