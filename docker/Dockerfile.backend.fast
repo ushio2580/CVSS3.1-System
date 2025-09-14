@@ -1,5 +1,5 @@
 # Fast Dockerfile for CVSS System Backend (SWR Optimized)
-FROM swr.cn-north-4.myhuaweicloud.com/library/python:3.12-slim
+FROM swr.cn-north-4.myhuaweicloud.com/library/python:3.11-slim
 
 # Set working directory
 WORKDIR /app
