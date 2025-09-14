@@ -1,0 +1,41 @@
+# Fast Dockerfile for CVSS System Backend (SWR Optimized)
+FROM python:3.12-slim
+
+# Set working directory
+WORKDIR /app
+
+# Install system dependencies with minimal packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libpq-dev \
+    curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && apt-get clean
+
+# Copy requirements first for better caching
+COPY backend/requirements.txt .
+
+# Install Python dependencies with optimizations
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY backend/ .
+
+# Create non-root user
+RUN useradd -r -s /bin/bash -d /app cvss \
+    && chown -R cvss:cvss /app \
+    && mkdir -p uploads \
+    && chown cvss:cvss uploads
+
+USER cvss
+
+# Expose port
+EXPOSE 5000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:5000/api/health || exit 1
+
+# Run the application
+CMD ["python", "run.py"]
